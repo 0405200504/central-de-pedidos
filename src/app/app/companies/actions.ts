@@ -20,6 +20,8 @@ export async function createCompany(formData: FormData) {
     const email = formData.get('email') as string
     const system_url = formData.get('system_url') as string
     const system_type = formData.get('system_type') as string
+    const remote_tool = formData.get('remote_tool') as string
+    const remote_code = formData.get('remote_code') as string
 
     if (!name) {
         return { error: 'O nome da empresa é obrigatório.' }
@@ -37,6 +39,8 @@ export async function createCompany(formData: FormData) {
                 email,
                 system_url: system_url || null,
                 system_type: system_type || 'web',
+                remote_tool: remote_tool || 'anydesk',
+                remote_code: remote_code || null,
             },
         ])
         .select()
@@ -109,6 +113,8 @@ export async function updateCompany(companyId: string, formData: FormData) {
     const email = formData.get('email') as string
     const system_url = formData.get('system_url') as string
     const system_type = formData.get('system_type') as string
+    const remote_tool = formData.get('remote_tool') as string
+    const remote_code = formData.get('remote_code') as string
 
     if (!name) {
         return { error: 'O nome da empresa é obrigatório.' }
@@ -123,6 +129,8 @@ export async function updateCompany(companyId: string, formData: FormData) {
             email,
             system_url: system_url || null,
             system_type: system_type || 'web',
+            remote_tool: remote_tool || 'anydesk',
+            remote_code: remote_code || null,
         })
         .eq('id', companyId)
 

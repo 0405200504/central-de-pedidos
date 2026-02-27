@@ -9,6 +9,8 @@ interface Company {
     logo_url?: string
     system_url?: string
     system_type?: string
+    remote_tool?: string
+    remote_code?: string
 }
 
 interface AppContextType {

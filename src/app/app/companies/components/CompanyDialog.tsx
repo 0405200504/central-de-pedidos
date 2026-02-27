@@ -30,6 +30,8 @@ function SubmitButton() {
 export function CompanyDialog({ company }: { company?: any }) {
     const [open, setOpen] = useState(false)
     const isEditing = !!company
+    const [systemType, setSystemType] = useState(company?.system_type || 'web')
+    const [remoteTool, setRemoteTool] = useState(company?.remote_tool || 'anydesk')
 
     async function clientAction(formData: FormData) {
         const result = isEditing ? await updateCompany(company.id, formData) : await createCompany(formData)
@@ -55,7 +57,7 @@ export function CompanyDialog({ company }: { company?: any }) {
                     </Button>
                 )}
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle>{isEditing ? 'Editar Empresa' : 'Nova Empresa'}</DialogTitle>
                     <DialogDescription>
@@ -64,24 +66,15 @@ export function CompanyDialog({ company }: { company?: any }) {
                 </DialogHeader>
                 <form action={clientAction}>
                     <div className="grid gap-4 py-4">
+
+                        {/* Dados básicos */}
                         <div className="space-y-2">
                             <Label htmlFor="name">Nome Fantasia *</Label>
-                            <Input
-                                id="name"
-                                name="name"
-                                placeholder="Ex: ACME Corp"
-                                defaultValue={company?.name || ''}
-                                required
-                            />
+                            <Input id="name" name="name" placeholder="Ex: ACME Corp" defaultValue={company?.name || ''} required />
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="legal_name">Razão Social (Opcional)</Label>
-                            <Input
-                                id="legal_name"
-                                name="legal_name"
-                                placeholder="Ex: ACME Corporation LTDA"
-                                defaultValue={company?.legal_name || ''}
-                            />
+                            <Input id="legal_name" name="legal_name" placeholder="Ex: ACME Corporation LTDA" defaultValue={company?.legal_name || ''} />
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="cnpj">CNPJ (Opcional)</Label>
@@ -91,32 +84,131 @@ export function CompanyDialog({ company }: { company?: any }) {
                             <Label htmlFor="email">E-mail (Opcional)</Label>
                             <Input id="email" name="email" type="email" placeholder="contato@acme.com" defaultValue={company?.email || ''} />
                         </div>
+
+                        {/* Tipo de sistema */}
+                        <hr className="border-border" />
                         <div className="space-y-2">
-                            <Label htmlFor="system_type">Tipo de Sistema</Label>
+                            <Label htmlFor="system_type">Como acessar o sistema desta empresa?</Label>
                             <select
                                 id="system_type"
                                 name="system_type"
-                                defaultValue={company?.system_type || 'web'}
+                                value={systemType}
+                                onChange={(e) => setSystemType(e.target.value)}
                                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
                             >
-                                <option value="web">🌐 Site / Sistema Web</option>
-                                <option value="desktop">🖥️ App Instalado / Sistema Interno</option>
-                                <option value="remote">📡 Acesso Remoto (TeamViewer, AnyDesk…)</option>
+                                <option value="web">🌐 Site / Sistema Web (URL)</option>
+                                <option value="desktop">🖥️ App Instalado no Computador (Acesso Remoto)</option>
+                                <option value="remote">🔗 Link de Sessão (popup externo)</option>
                             </select>
                         </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="system_url">URL do Sistema (Opcional)</Label>
-                            <Input
-                                id="system_url"
-                                name="system_url"
-                                type="url"
-                                placeholder="https://meu-sistema.com"
-                                defaultValue={company?.system_url || ''}
-                            />
-                            <p className="text-xs text-muted-foreground">
-                                Para sistemas web, cole a URL aqui. Para acesso remoto, cole o link de convite.
-                            </p>
-                        </div>
+
+                        {/* Sistema Web */}
+                        {systemType === 'web' && (
+                            <div className="space-y-2">
+                                <Label htmlFor="system_url">URL do Sistema</Label>
+                                <Input
+                                    id="system_url"
+                                    name="system_url"
+                                    type="url"
+                                    placeholder="https://meu-sistema.com"
+                                    defaultValue={company?.system_url || ''}
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    O sistema abrirá dentro do painel. Se o login SSO não funcionar, use o modo "Link de Sessão".
+                                </p>
+                            </div>
+                        )}
+
+                        {/* Sistema Desktop — Acesso Remoto */}
+                        {systemType === 'desktop' && (
+                            <div className="space-y-3 bg-blue-50 dark:bg-blue-950/30 rounded-xl p-4">
+                                <input type="hidden" name="system_url" value="" />
+                                <p className="text-sm font-semibold">Ferramenta de Acesso Remoto</p>
+                                <p className="text-xs text-muted-foreground">
+                                    Para acessar um sistema instalado no computador, você precisa instalar uma ferramenta de acesso remoto
+                                    nesse computador. Escolha a ferramenta e informe o código/ID gerado por ela.
+                                </p>
+                                <div className="space-y-2">
+                                    <Label htmlFor="remote_tool">Ferramenta</Label>
+                                    <select
+                                        id="remote_tool"
+                                        name="remote_tool"
+                                        value={remoteTool}
+                                        onChange={(e) => setRemoteTool(e.target.value)}
+                                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                                    >
+                                        <option value="anydesk">⚡ AnyDesk (recomendado)</option>
+                                        <option value="chrome_remote">🖥️ Chrome Remote Desktop</option>
+                                        <option value="teamviewer">🔌 TeamViewer</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="remote_code">
+                                        {remoteTool === 'anydesk' && 'ID do AnyDesk'}
+                                        {remoteTool === 'chrome_remote' && 'Link ou código de acesso do Chrome Remote Desktop'}
+                                        {remoteTool === 'teamviewer' && 'ID do TeamViewer'}
+                                    </Label>
+                                    <Input
+                                        id="remote_code"
+                                        name="remote_code"
+                                        placeholder={
+                                            remoteTool === 'anydesk' ? 'Ex: 123 456 789' :
+                                                remoteTool === 'chrome_remote' ? 'Ex: https://remotedesktop.google.com/access/...' :
+                                                    'Ex: 123 456 789'
+                                        }
+                                        defaultValue={company?.remote_code || ''}
+                                    />
+                                </div>
+                                {remoteTool === 'anydesk' && (
+                                    <div className="bg-white dark:bg-zinc-900 rounded-lg p-3 text-xs space-y-1 border">
+                                        <p className="font-semibold">Como configurar o AnyDesk:</p>
+                                        <ol className="list-decimal list-inside space-y-0.5 text-muted-foreground">
+                                            <li>Baixe o AnyDesk no computador onde o sistema está instalado</li>
+                                            <li>Abra o AnyDesk — ele vai mostrar um ID (Ex: 123 456 789)</li>
+                                            <li>Ative "Acesso não supervisionado" nas configurações</li>
+                                            <li>Cole o ID acima e salve</li>
+                                        </ol>
+                                        <a href="https://anydesk.com/pt/downloads" target="_blank" rel="noopener noreferrer"
+                                            className="text-blue-600 hover:underline inline-block mt-1">
+                                            Baixar AnyDesk →
+                                        </a>
+                                    </div>
+                                )}
+                                {remoteTool === 'chrome_remote' && (
+                                    <div className="bg-white dark:bg-zinc-900 rounded-lg p-3 text-xs space-y-1 border">
+                                        <p className="font-semibold">Como configurar o Chrome Remote Desktop:</p>
+                                        <ol className="list-decimal list-inside space-y-0.5 text-muted-foreground">
+                                            <li>Acesse remotedesktop.google.com no computador da empresa</li>
+                                            <li>Clique em "Acesso Remoto" → "Ativar"</li>
+                                            <li>Instale a extensão quando pedido</li>
+                                            <li>Copie o link de acesso gerado e cole acima</li>
+                                        </ol>
+                                        <a href="https://remotedesktop.google.com/access" target="_blank" rel="noopener noreferrer"
+                                            className="text-blue-600 hover:underline inline-block mt-1">
+                                            Configurar Chrome Remote Desktop →
+                                        </a>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Link de sessão / popup */}
+                        {systemType === 'remote' && (
+                            <div className="space-y-2">
+                                <Label htmlFor="system_url">Link de Acesso</Label>
+                                <Input
+                                    id="system_url"
+                                    name="system_url"
+                                    type="url"
+                                    placeholder="https://..."
+                                    defaultValue={company?.system_url || ''}
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    O link abrirá em uma janela popup flutuante separada do navegador — ideal para sistemas com SSO (Salesforce, etc.) que bloqueiam iframe.
+                                </p>
+                            </div>
+                        )}
+
                     </div>
                     <DialogFooter>
                         <SubmitButton />
