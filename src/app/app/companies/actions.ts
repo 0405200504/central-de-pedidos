@@ -19,6 +19,7 @@ export async function createCompany(formData: FormData) {
     const cnpj = formData.get('cnpj') as string
     const email = formData.get('email') as string
     const system_url = formData.get('system_url') as string
+    const system_type = formData.get('system_type') as string
 
     if (!name) {
         return { error: 'O nome da empresa é obrigatório.' }
@@ -35,6 +36,7 @@ export async function createCompany(formData: FormData) {
                 cnpj,
                 email,
                 system_url: system_url || null,
+                system_type: system_type || 'web',
             },
         ])
         .select()
@@ -106,6 +108,7 @@ export async function updateCompany(companyId: string, formData: FormData) {
     const cnpj = formData.get('cnpj') as string
     const email = formData.get('email') as string
     const system_url = formData.get('system_url') as string
+    const system_type = formData.get('system_type') as string
 
     if (!name) {
         return { error: 'O nome da empresa é obrigatório.' }
@@ -119,6 +122,7 @@ export async function updateCompany(companyId: string, formData: FormData) {
             cnpj,
             email,
             system_url: system_url || null,
+            system_type: system_type || 'web',
         })
         .eq('id', companyId)
 

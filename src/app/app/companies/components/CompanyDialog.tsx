@@ -92,6 +92,19 @@ export function CompanyDialog({ company }: { company?: any }) {
                             <Input id="email" name="email" type="email" placeholder="contato@acme.com" defaultValue={company?.email || ''} />
                         </div>
                         <div className="space-y-2">
+                            <Label htmlFor="system_type">Tipo de Sistema</Label>
+                            <select
+                                id="system_type"
+                                name="system_type"
+                                defaultValue={company?.system_type || 'web'}
+                                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                            >
+                                <option value="web">🌐 Site / Sistema Web</option>
+                                <option value="desktop">🖥️ App Instalado / Sistema Interno</option>
+                                <option value="remote">📡 Acesso Remoto (TeamViewer, AnyDesk…)</option>
+                            </select>
+                        </div>
+                        <div className="space-y-2">
                             <Label htmlFor="system_url">URL do Sistema (Opcional)</Label>
                             <Input
                                 id="system_url"
@@ -101,7 +114,7 @@ export function CompanyDialog({ company }: { company?: any }) {
                                 defaultValue={company?.system_url || ''}
                             />
                             <p className="text-xs text-muted-foreground">
-                                Cole aqui o link do sistema desta empresa. Ele abrirá diretamente pelo painel lateral.
+                                Para sistemas web, cole a URL aqui. Para acesso remoto, cole o link de convite.
                             </p>
                         </div>
                     </div>

@@ -8,6 +8,7 @@ interface Company {
     name: string
     logo_url?: string
     system_url?: string
+    system_type?: string
 }
 
 interface AppContextType {
