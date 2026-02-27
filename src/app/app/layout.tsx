@@ -23,6 +23,7 @@ export default async function AppLayout({
     const { data: companiesData } = await supabase
         .from('companies')
         .select('id, name, logo_url, system_url, system_type, remote_tool, remote_code')
+        .eq('owner_id', user.id)
         .order('name')
 
     const initialCompanies = companiesData || []

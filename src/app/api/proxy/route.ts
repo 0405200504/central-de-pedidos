@@ -68,7 +68,7 @@ window.addEventListener('click', function(e) {
         var href = el.href;
         if (!href.startsWith('${baseOrigin}') && !href.startsWith('/')) return;
         e.preventDefault();
-        var proxyUrl = '/_proxy?url=' + encodeURIComponent(href);
+        var proxyUrl = '/api/proxy?url=' + encodeURIComponent(href);
         window.location.href = proxyUrl;
     }
 }, true);
