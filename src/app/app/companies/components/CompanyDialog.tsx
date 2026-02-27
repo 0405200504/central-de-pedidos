@@ -91,6 +91,19 @@ export function CompanyDialog({ company }: { company?: any }) {
                             <Label htmlFor="email">E-mail (Opcional)</Label>
                             <Input id="email" name="email" type="email" placeholder="contato@acme.com" defaultValue={company?.email || ''} />
                         </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="system_url">URL do Sistema (Opcional)</Label>
+                            <Input
+                                id="system_url"
+                                name="system_url"
+                                type="url"
+                                placeholder="https://meu-sistema.com"
+                                defaultValue={company?.system_url || ''}
+                            />
+                            <p className="text-xs text-muted-foreground">
+                                Cole aqui o link do sistema desta empresa. Ele abrirá diretamente pelo painel lateral.
+                            </p>
+                        </div>
                     </div>
                     <DialogFooter>
                         <SubmitButton />

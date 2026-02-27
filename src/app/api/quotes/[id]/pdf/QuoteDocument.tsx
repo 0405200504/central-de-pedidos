@@ -148,16 +148,10 @@ export const QuoteDocument = ({ quote, company, client, items }: any) => {
                     {quote.payment_terms && <Text>Pagamento: {quote.payment_terms}</Text>}
                     {quote.delivery_time && <Text>Prazo de Entrega: {quote.delivery_time}</Text>}
                     {quote.freight_type && <Text>Tipo de Frete: {quote.freight_type} {quote.carrier ? `(${quote.carrier})` : ''}</Text>}
-                    {quote.notes_commercial && (
+                    {quote.notes_external && (
                         <View style={{ marginTop: 8 }}>
-                            <Text style={{ fontWeight: 'bold' }}>Observações Comerciais:</Text>
-                            <Text>{quote.notes_commercial}</Text>
-                        </View>
-                    )}
-                    {quote.notes_fiscal && (
-                        <View style={{ marginTop: 8 }}>
-                            <Text style={{ fontWeight: 'bold' }}>Observações Fiscais:</Text>
-                            <Text>{quote.notes_fiscal}</Text>
+                            <Text style={{ fontWeight: 'bold' }}>Observações:</Text>
+                            <Text>{quote.notes_external}</Text>
                         </View>
                     )}
                 </View>

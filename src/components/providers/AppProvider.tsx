@@ -7,6 +7,7 @@ interface Company {
     id: string
     name: string
     logo_url?: string
+    system_url?: string
 }
 
 interface AppContextType {

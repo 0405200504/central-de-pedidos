@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Plus, Trash2 } from 'lucide-react'
-import { createQuoteAction } from '../actions'
+import { createQuoteAction, updateQuoteAction } from '../actions'
 import { toast } from 'sonner'
 import {
     Card,
@@ -38,7 +38,12 @@ export function QuoteForm({ clients, products, initialQuote }: { clients: any[],
     const isEditing = !!initialQuote
 
     const [clientId, setClientId] = useState(initialQuote?.client_id || '')
-    const [items, setItems] = useState<Item[]>(initialQuote?.quote_items || [])
+    const [items, setItems] = useState<Item[]>(
+        (initialQuote?.quote_items || []).map((item: any) => ({
+            ...item,
+            id: item.id || crypto.randomUUID(),
+        }))
+    )
     const [discountTotal, setDiscountTotal] = useState(initialQuote?.discount_total || 0)
     const [taxTotal, setTaxTotal] = useState(initialQuote?.tax_total || 0)
     const [shippingTotal, setShippingTotal] = useState(initialQuote?.shipping_total || 0)
@@ -46,9 +51,11 @@ export function QuoteForm({ clients, products, initialQuote }: { clients: any[],
     const [deliveryTime, setDeliveryTime] = useState(initialQuote?.delivery_time || '')
     const [freightType, setFreightType] = useState(initialQuote?.freight_type || 'CIF')
     const [carrier, setCarrier] = useState(initialQuote?.carrier || '')
-    const [notesCommercial, setNotesCommercial] = useState(initialQuote?.notes_commercial || '')
-    const [notesFiscal, setNotesFiscal] = useState(initialQuote?.notes_fiscal || '')
-    const [validUntil, setValidUntil] = useState(initialQuote?.valid_until || '')
+    const [notesInternal, setNotesInternal] = useState(initialQuote?.notes_internal || '')
+    const [notesExternal, setNotesExternal] = useState(initialQuote?.notes_external || '')
+    const [validUntil, setValidUntil] = useState(
+        initialQuote?.valid_until ? initialQuote.valid_until.substring(0, 10) : ''
+    )
 
     const handleAddItem = () => {
         setItems((prev) => [
@@ -118,50 +125,33 @@ export function QuoteForm({ clients, products, initialQuote }: { clients: any[],
 
         setLoading(true)
 
-        let result;
+        const payload = {
+            discount_total: discountTotal,
+            tax_total: taxTotal,
+            shipping_total: shippingTotal,
+            payment_terms: paymentTerms,
+            delivery_time: deliveryTime,
+            freight_type: freightType,
+            carrier: carrier,
+            notes_internal: notesInternal,
+            notes_external: notesExternal,
+            valid_until: validUntil || null,
+        }
 
-        if (isEditing) {
-            // we need to dynamically import update action here or use it if imported
-            const { updateQuoteAction } = await import('../actions')
-            result = await updateQuoteAction(
+        const result = isEditing
+            ? await updateQuoteAction(
                 initialQuote.id,
                 activeCompany.id,
                 clientId,
                 items,
-                {
-                    discount_total: discountTotal,
-                    tax_total: taxTotal,
-                    shipping_total: shippingTotal,
-                    payment_terms: paymentTerms,
-                    delivery_time: deliveryTime,
-                    freight_type: freightType,
-                    carrier: carrier,
-                    notes_commercial: notesCommercial,
-                    notes_fiscal: notesFiscal,
-                    valid_until: validUntil || null,
-                    status: initialQuote.status // keep existing
-                }
+                { ...payload, status: initialQuote.status }
             )
-        } else {
-            result = await createQuoteAction(
+            : await createQuoteAction(
                 activeCompany.id,
                 clientId,
                 items,
-                {
-                    discount_total: discountTotal,
-                    tax_total: taxTotal,
-                    shipping_total: shippingTotal,
-                    payment_terms: paymentTerms,
-                    delivery_time: deliveryTime,
-                    freight_type: freightType,
-                    carrier: carrier,
-                    notes_commercial: notesCommercial,
-                    notes_fiscal: notesFiscal,
-                    valid_until: validUntil || null,
-                    status: 'draft'
-                }
+                { ...payload, status: 'draft' }
             )
-        }
 
         setLoading(false)
 
@@ -394,21 +384,23 @@ export function QuoteForm({ clients, products, initialQuote }: { clients: any[],
                     </div>
                     <div className="space-y-4">
                         <div className="space-y-2">
-                            <Label>Observação Comercial (Vai no PDF)</Label>
+                            <Label>🔒 Observação Interna</Label>
+                            <p className="text-xs text-muted-foreground">Visível somente para sua equipe. Não aparece no PDF enviado ao cliente.</p>
                             <Textarea
-                                placeholder="Opcional. Ex: Condições sujeitas a análise de crédito."
+                                placeholder="Ex: cliente pediu desconto extra, analisar com gerência..."
                                 className="resize-none h-24"
-                                value={notesCommercial}
-                                onChange={e => setNotesCommercial(e.target.value)}
+                                value={notesInternal}
+                                onChange={e => setNotesInternal(e.target.value)}
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label>Observação Fiscal</Label>
+                            <Label>📄 Observação Externa (aparece no PDF)</Label>
+                            <p className="text-xs text-muted-foreground">Enviada ao cliente. Aparece no PDF do orçamento.</p>
                             <Textarea
-                                placeholder="Opcional."
+                                placeholder="Ex: Condições sujeitas a análise de crédito. Proposta válida por 30 dias."
                                 className="resize-none h-24"
-                                value={notesFiscal}
-                                onChange={e => setNotesFiscal(e.target.value)}
+                                value={notesExternal}
+                                onChange={e => setNotesExternal(e.target.value)}
                             />
                         </div>
                     </div>

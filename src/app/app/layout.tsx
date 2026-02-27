@@ -22,7 +22,7 @@ export default async function AppLayout({
     // Fetch Companies the user is a member of
     const { data: companiesData } = await supabase
         .from('companies')
-        .select('id, name, logo_url')
+        .select('id, name, logo_url, system_url')
         .order('name')
 
     const initialCompanies = companiesData || []

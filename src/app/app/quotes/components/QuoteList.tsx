@@ -10,20 +10,21 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Search, FileText, Download, Edit } from 'lucide-react'
+import { Search, FileText, Edit, ShoppingCart } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { toast } from 'sonner'
 import { QuoteStatusSelect } from './QuoteStatusSelect'
 import { DeleteQuoteButton } from './DeleteQuoteButton'
+import { convertQuoteToOrderAction } from '../actions'
 
 export function QuoteList({ initialQuotes }: { initialQuotes: any[] }) {
     const { activeCompany } = useAppContext()
     const [searchTerm, setSearchTerm] = useState('')
     const [loadingPdf, setLoadingPdf] = useState<string | null>(null)
+    const [converting, setConverting] = useState<string | null>(null)
 
     const filteredQuotes = initialQuotes.filter((quote) => {
         if (!activeCompany) return false
@@ -38,15 +39,15 @@ export function QuoteList({ initialQuotes }: { initialQuotes: any[] }) {
         return true
     })
 
-    const getStatusColor = (status: string) => {
-        switch (status) {
-            case 'accepted': return 'bg-green-500'
-            case 'sent': return 'bg-blue-500'
-            case 'draft': return 'bg-gray-500'
-            case 'rejected': return 'bg-red-500'
-            case 'expired': return 'bg-yellow-600'
-            default: return 'bg-gray-500'
+    const getStatusBadge = (status: string) => {
+        const map: Record<string, string> = {
+            accepted: 'bg-green-100 text-green-700',
+            sent: 'bg-blue-100 text-blue-700',
+            draft: 'bg-gray-100 text-gray-700',
+            rejected: 'bg-red-100 text-red-700',
+            expired: 'bg-yellow-100 text-yellow-700',
         }
+        return map[status] || 'bg-gray-100 text-gray-700'
     }
 
     const handleGeneratePdf = async (quoteId: string, quoteNumber: number) => {
@@ -81,6 +82,18 @@ export function QuoteList({ initialQuotes }: { initialQuotes: any[] }) {
         }
     }
 
+    const handleConvertToOrder = async (quoteId: string) => {
+        setConverting(quoteId)
+        const result = await convertQuoteToOrderAction(quoteId)
+        setConverting(null)
+
+        if (result.error) {
+            toast.error(result.error)
+        } else {
+            toast.success(`Pedido #${result.orderNumber} criado com sucesso! Acesse a aba Pedidos.`)
+        }
+    }
+
     if (!activeCompany) {
         return (
             <div className="flex h-32 items-center justify-center rounded-md border border-dashed text-muted-foreground">
@@ -112,7 +125,7 @@ export function QuoteList({ initialQuotes }: { initialQuotes: any[] }) {
                             <TableHead>Cliente</TableHead>
                             <TableHead>Total (R$)</TableHead>
                             <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Ações PDF</TableHead>
+                            <TableHead className="text-right">Ações</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -140,20 +153,41 @@ export function QuoteList({ initialQuotes }: { initialQuotes: any[] }) {
                                     <TableCell>
                                         <QuoteStatusSelect quoteId={quote.id} currentStatus={quote.status} />
                                     </TableCell>
-                                    <TableCell className="text-right flex items-center justify-end gap-2">
-                                        <Button
-                                            variant="secondary"
-                                            size="sm"
-                                            disabled={loadingPdf === quote.id}
-                                            onClick={() => handleGeneratePdf(quote.id, quote.number)}
-                                        >
-                                            <FileText className="h-4 w-4 mr-1" />
-                                            {loadingPdf === quote.id ? 'Gerando...' : 'Baixar PDF'}
-                                        </Button>
-                                        <Button variant="outline" size="icon" onClick={() => window.location.href = `/app/quotes/${quote.id}/edit`}>
-                                            <Edit className="h-4 w-4" />
-                                        </Button>
-                                        <DeleteQuoteButton quoteId={quote.id} quoteNumber={quote.number} />
+                                    <TableCell className="text-right">
+                                        <div className="flex items-center justify-end gap-1.5">
+                                            {/* Converter em Pedido — só aparece quando aceito */}
+                                            {quote.status === 'accepted' && (
+                                                <Button
+                                                    variant="default"
+                                                    size="sm"
+                                                    className="bg-green-600 hover:bg-green-700 text-white"
+                                                    disabled={converting === quote.id}
+                                                    title="Converter orçamento aprovado em pedido"
+                                                    onClick={() => handleConvertToOrder(quote.id)}
+                                                >
+                                                    <ShoppingCart className="h-4 w-4 mr-1" />
+                                                    {converting === quote.id ? 'Convertendo...' : 'Virar Pedido'}
+                                                </Button>
+                                            )}
+
+                                            <Button
+                                                variant="secondary"
+                                                size="sm"
+                                                disabled={loadingPdf === quote.id}
+                                                onClick={() => handleGeneratePdf(quote.id, quote.number)}
+                                            >
+                                                <FileText className="h-4 w-4 mr-1" />
+                                                {loadingPdf === quote.id ? 'Gerando...' : 'PDF'}
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                size="icon"
+                                                onClick={() => window.location.href = `/app/quotes/${quote.id}/edit`}
+                                            >
+                                                <Edit className="h-4 w-4" />
+                                            </Button>
+                                            <DeleteQuoteButton quoteId={quote.id} quoteNumber={quote.number} />
+                                        </div>
                                     </TableCell>
                                 </TableRow>
                             ))

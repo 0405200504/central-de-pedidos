@@ -48,8 +48,8 @@ export async function createQuoteAction(
                 delivery_time: data.delivery_time,
                 freight_type: data.freight_type,
                 carrier: data.carrier,
-                notes_commercial: data.notes_commercial,
-                notes_fiscal: data.notes_fiscal,
+                notes_internal: data.notes_internal,
+                notes_external: data.notes_external,
                 created_by: userResponse.user.id,
             },
         ])
@@ -115,8 +115,6 @@ export async function updateQuoteStatusAction(quoteId: string, status: string) {
 }
 
 export async function generateQuotePdfAction(quoteId: string, companyId: string) {
-    // We'll call an API route to generate the PDF so it can run Puppeteer or similar separately if needed,
-    // or we can just fetch the endpoint from the server action.
     try {
         const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
 
@@ -185,8 +183,8 @@ export async function updateQuoteAction(
             delivery_time: data.delivery_time,
             freight_type: data.freight_type,
             carrier: data.carrier,
-            notes_commercial: data.notes_commercial,
-            notes_fiscal: data.notes_fiscal,
+            notes_internal: data.notes_internal,
+            notes_external: data.notes_external,
         })
         .eq('id', quoteId)
 
@@ -224,4 +222,95 @@ export async function updateQuoteAction(
 
     revalidatePath('/app/quotes')
     return { success: true, quoteId }
+}
+
+export async function convertQuoteToOrderAction(quoteId: string) {
+    const supabase = await createClient()
+    const { data: userResponse } = await supabase.auth.getUser()
+
+    if (!userResponse.user) {
+        return { error: 'Não autenticado.' }
+    }
+
+    // 1. Fetch the quote with items
+    const { data: quote, error: quoteError } = await supabase
+        .from('quotes')
+        .select('*, quote_items(*)')
+        .eq('id', quoteId)
+        .single()
+
+    if (quoteError || !quote) {
+        return { error: 'Orçamento não encontrado.' }
+    }
+
+    // 2. Get or create company counter for order number
+    const { data: counter } = await supabase
+        .from('company_counters')
+        .select('next_order_number')
+        .eq('company_id', quote.company_id)
+        .single()
+
+    const orderNumber = counter?.next_order_number || 1
+
+    // 3. Create Order
+    const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .insert([{
+            company_id: quote.company_id,
+            client_id: quote.client_id,
+            number: orderNumber,
+            status: 'rascunho',
+            subtotal: quote.subtotal,
+            discount_total: quote.discount_total,
+            tax_total: quote.tax_total,
+            shipping_total: quote.shipping_total,
+            total: quote.total,
+            payment_terms: quote.payment_terms,
+            notes_internal: quote.notes_internal,
+            notes_client: quote.notes_external,
+            issued_at: new Date().toISOString(),
+            created_by: userResponse.user.id,
+        }])
+        .select()
+        .single()
+
+    if (orderError || !order) {
+        console.error('Order creation error:', orderError)
+        return { error: 'Erro ao criar pedido.' }
+    }
+
+    // 4. Create Order Items from Quote Items
+    const orderItems = (quote.quote_items || []).map((item: any) => ({
+        order_id: order.id,
+        product_id: item.product_id || null,
+        description_snapshot: item.name,
+        ncm_snapshot: item.ncm,
+        qty: item.qty,
+        unit: item.unit,
+        unit_price: item.unit_price,
+        discount_value: item.discounts || 0,
+        tax_value: item.taxes || 0,
+        total: item.total,
+    }))
+
+    if (orderItems.length > 0) {
+        const { error: itemsError } = await supabase
+            .from('order_items')
+            .insert(orderItems)
+
+        if (itemsError) {
+            console.error('Order items error:', itemsError)
+            return { error: 'Erro ao copiar itens para o pedido.' }
+        }
+    }
+
+    // 5. Update counter
+    await supabase
+        .from('company_counters')
+        .update({ next_order_number: orderNumber + 1 })
+        .eq('company_id', quote.company_id)
+
+    revalidatePath('/app/quotes')
+    revalidatePath('/app/orders')
+    return { success: true, orderId: order.id, orderNumber }
 }
