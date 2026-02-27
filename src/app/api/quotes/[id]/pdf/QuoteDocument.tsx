@@ -47,6 +47,7 @@ export const QuoteDocument = ({ quote, company, client, items }: any) => {
                 {/* HEADER */}
                 <View style={styles.header}>
                     <View style={styles.companyInfo}>
+                        {/* eslint-disable-next-line jsx-a11y/alt-text */}
                         {company.logo_url && <Image src={company.logo_url} style={styles.logo} />}
                         <Text style={styles.companyName}>{company.name}</Text>
                         {company.legal_name && <Text>{company.legal_name}</Text>}
