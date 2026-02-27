@@ -5,44 +5,36 @@ import { revalidatePath } from 'next/cache'
 
 export async function createCompany(formData: FormData) {
     const supabase = await createClient()
-
-    const {
-        data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
-        return { error: 'Usuário não autenticado.' }
-    }
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: 'Usuário não autenticado.' }
 
     const name = formData.get('name') as string
-    const legal_name = formData.get('legal_name') as string
     const cnpj = formData.get('cnpj') as string
     const email = formData.get('email') as string
+    const system_type = (formData.get('system_type') as string) || 'web'
     const system_url = formData.get('system_url') as string
-    const system_type = formData.get('system_type') as string
-    const remote_tool = formData.get('remote_tool') as string
-    const remote_code = formData.get('remote_code') as string
+    const open_in_new_tab = formData.get('open_in_new_tab') === 'true'
+    const rdp_host = formData.get('rdp_host') as string
+    const rdp_port = parseInt(formData.get('rdp_port') as string) || 3389
+    const rdp_user = formData.get('rdp_user') as string
 
-    if (!name) {
-        return { error: 'O nome da empresa é obrigatório.' }
-    }
+    if (!name) return { error: 'O nome da empresa é obrigatório.' }
+    if (system_type === 'rdp' && !rdp_host) return { error: 'Informe o IP ou Host para acesso RDP.' }
 
-    // 1. Create company
     const { data: company, error: companyError } = await supabase
         .from('companies')
-        .insert([
-            {
-                owner_id: user.id,
-                name,
-                legal_name,
-                cnpj,
-                email,
-                system_url: system_url || null,
-                system_type: system_type || 'web',
-                remote_tool: remote_tool || 'anydesk',
-                remote_code: remote_code || null,
-            },
-        ])
+        .insert([{
+            owner_id: user.id,
+            name,
+            cnpj,
+            email,
+            system_type,
+            system_url: system_url || null,
+            open_in_new_tab,
+            rdp_host: rdp_host || null,
+            rdp_port: rdp_host ? rdp_port : null,
+            rdp_user: rdp_user || null,
+        }])
         .select()
         .single()
 
@@ -51,45 +43,28 @@ export async function createCompany(formData: FormData) {
         return { error: 'Erro ao criar a empresa.' }
     }
 
-    // 2. Add current user to company_members
-    const { error: memberError } = await supabase
-        .from('company_members')
-        .insert([
-            {
-                company_id: company.id,
-                user_id: user.id,
-                role: 'owner',
-            },
-        ])
+    // Add current user to company_members
+    await supabase.from('company_members').insert([{
+        company_id: company.id,
+        user_id: user.id,
+        role: 'owner',
+    }])
 
-    if (memberError) {
-        console.error(memberError)
-        return { error: 'Erro ao vincular perfil à empresa.' }
-    }
-
-    revalidatePath('/app', 'layout') // Revalidate layout to update Topbar generic company list
+    revalidatePath('/app', 'layout')
     return { success: true }
 }
 
 export async function deleteCompany(companyId: string) {
     const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: 'Usuário não autenticado.' }
 
-    const {
-        data: { user },
-    } = await supabase.auth.getUser()
+    const { error } = await supabase
+        .from('companies').delete().eq('id', companyId)
 
-    if (!user) {
-        return { error: 'Usuário não autenticado.' }
-    }
-
-    const { error: deleteError } = await supabase
-        .from('companies')
-        .delete()
-        .eq('id', companyId)
-
-    if (deleteError) {
-        console.error(deleteError)
-        return { error: 'Erro ao excluir a empresa. Verifique se você é o proprietário.' }
+    if (error) {
+        console.error(error)
+        return { error: 'Erro ao excluir a empresa.' }
     }
 
     revalidatePath('/app', 'layout')
@@ -98,44 +73,38 @@ export async function deleteCompany(companyId: string) {
 
 export async function updateCompany(companyId: string, formData: FormData) {
     const supabase = await createClient()
-
-    const {
-        data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
-        return { error: 'Usuário não autenticado.' }
-    }
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: 'Usuário não autenticado.' }
 
     const name = formData.get('name') as string
-    const legal_name = formData.get('legal_name') as string
     const cnpj = formData.get('cnpj') as string
     const email = formData.get('email') as string
+    const system_type = (formData.get('system_type') as string) || 'web'
     const system_url = formData.get('system_url') as string
-    const system_type = formData.get('system_type') as string
-    const remote_tool = formData.get('remote_tool') as string
-    const remote_code = formData.get('remote_code') as string
+    const open_in_new_tab = formData.get('open_in_new_tab') === 'true'
+    const rdp_host = formData.get('rdp_host') as string
+    const rdp_port = parseInt(formData.get('rdp_port') as string) || 3389
+    const rdp_user = formData.get('rdp_user') as string
 
-    if (!name) {
-        return { error: 'O nome da empresa é obrigatório.' }
-    }
+    if (!name) return { error: 'O nome da empresa é obrigatório.' }
 
-    const { error: updateError } = await supabase
+    const { error } = await supabase
         .from('companies')
         .update({
             name,
-            legal_name,
             cnpj,
             email,
+            system_type,
             system_url: system_url || null,
-            system_type: system_type || 'web',
-            remote_tool: remote_tool || 'anydesk',
-            remote_code: remote_code || null,
+            open_in_new_tab,
+            rdp_host: rdp_host || null,
+            rdp_port: rdp_host ? rdp_port : null,
+            rdp_user: rdp_user || null,
         })
         .eq('id', companyId)
 
-    if (updateError) {
-        console.error(updateError)
+    if (error) {
+        console.error(error)
         return { error: 'Erro ao editar a empresa.' }
     }
 
@@ -145,17 +114,9 @@ export async function updateCompany(companyId: string, formData: FormData) {
 
 export async function updateCompanyStatus(companyId: string, status: string) {
     const supabase = await createClient()
-
     const { error } = await supabase
-        .from('companies')
-        .update({ status })
-        .eq('id', companyId)
-
-    if (error) {
-        console.error(error)
-        return { error: 'Erro ao atualizar status da empresa.' }
-    }
-
+        .from('companies').update({ status }).eq('id', companyId)
+    if (error) return { error: 'Erro ao atualizar status.' }
     revalidatePath('/app', 'layout')
     return { success: true }
 }

@@ -22,7 +22,7 @@ export default async function AppLayout({
     // Fetch Companies the user is a member of
     const { data: companiesData } = await supabase
         .from('companies')
-        .select('id, name, logo_url, system_url, system_type, remote_tool, remote_code')
+        .select('id, name, logo_url, system_url, system_type, open_in_new_tab, rdp_host, rdp_port, rdp_user')
         .eq('owner_id', user.id)
         .order('name')
 

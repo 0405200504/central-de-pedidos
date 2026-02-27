@@ -2,29 +2,49 @@
 
 import { useAppContext } from '@/components/providers/AppProvider'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, ExternalLink, AlertCircle, Monitor, Wifi, RefreshCw } from 'lucide-react'
+import { ArrowLeft, ExternalLink, AlertCircle, Monitor, RefreshCw, Copy, Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useState, useCallback } from 'react'
+import { toast } from 'sonner'
 
-// ─── Popup Helper ────────────────────────────────────────────────────────────
+// ── Popup helper ───────────────────────────────────────────────────────────────
 function openPopup(url: string, title: string) {
-    const w = window.screen.width * 0.8
-    const h = window.screen.height * 0.85
+    const w = window.screen.width * 0.85
+    const h = window.screen.height * 0.9
     const left = window.screen.width / 2 - w / 2
     const top = window.screen.height / 2 - h / 2
-    window.open(
-        url,
-        title,
-        `width=${Math.round(w)},height=${Math.round(h)},top=${Math.round(top)},left=${Math.round(left)},resizable=yes,scrollbars=yes,status=yes,toolbar=yes`
-    )
+    window.open(url, title, `width=${Math.round(w)},height=${Math.round(h)},top=${Math.round(top)},left=${Math.round(left)},resizable=yes,scrollbars=yes,toolbar=yes`)
 }
 
-// ─── Portal Topbar ────────────────────────────────────────────────────────────
+// ── .rdp download ─────────────────────────────────────────────────────────────
+function downloadRdp(host: string, port: number, user: string, companyName: string) {
+    const content = [
+        `full address:s:${host}:${port || 3389}`,
+        `username:s:${user || ''}`,
+        `prompt for credentials:i:1`,
+        `authentication level:i:2`,
+        `connection type:i:7`,
+        `networkautodetect:i:1`,
+        `bandwidthautodetect:i:1`,
+        `session bpp:i:32`,
+        `desktopwidth:i:1920`,
+        `desktopheight:i:1080`,
+    ].join('\r\n')
+
+    const blob = new Blob([content], { type: 'application/x-rdp' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${companyName.replace(/[^a-z0-9]/gi, '-').toLowerCase()}.rdp`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+}
+
+// ── Portal Topbar ─────────────────────────────────────────────────────────────
 function PortalBar({ company, badge, badgeColor, extra }: {
-    company: any
-    badge?: string
-    badgeColor?: string
-    extra?: React.ReactNode
+    company: any; badge?: string; badgeColor?: string; extra?: React.ReactNode
 }) {
     const router = useRouter()
     return (
@@ -35,9 +55,7 @@ function PortalBar({ company, badge, badgeColor, extra }: {
             <div className="flex items-center gap-2 flex-1 min-w-0">
                 <span className="text-sm font-semibold shrink-0">{company.name}</span>
                 {badge && (
-                    <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${badgeColor}`}>
-                        {badge}
-                    </span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${badgeColor}`}>{badge}</span>
                 )}
             </div>
             {extra}
@@ -45,228 +63,89 @@ function PortalBar({ company, badge, badgeColor, extra }: {
     )
 }
 
-// ─── Desktop / App Instalado ──────────────────────────────────────────────────
-function DesktopPanel({ company }: { company: any }) {
-    const router = useRouter()
-    const remoteTool = company.remote_tool || 'anydesk'
-    const remoteCode = company.remote_code
+// ── RDP Panel ─────────────────────────────────────────────────────────────────
+function RdpPanel({ company }: { company: any }) {
+    const host = company.rdp_host || ''
+    const port = company.rdp_port || 3389
+    const user = company.rdp_user || ''
 
-    const tools: Record<string, { label: string; icon: string; embedFn?: () => string | null; setupUrl: string; setupSteps: string[] }> = {
-        anydesk: {
-            label: 'AnyDesk',
-            icon: '⚡',
-            embedFn: () => remoteCode ? null : null, // AnyDesk web opens its own portal
-            setupUrl: 'https://anydesk.com/pt/downloads',
-            setupSteps: [
-                'Baixe o AnyDesk no computador onde o sistema está instalado',
-                'Abra o AnyDesk — ele mostrará um ID numérico (ex: 123 456 789)',
-                'Ative "Acesso não supervisionado" nas configurações do AnyDesk',
-                'Salve o ID acima no cadastro da empresa',
-            ],
-        },
-        chrome_remote: {
-            label: 'Chrome Remote Desktop',
-            icon: '🖥️',
-            setupUrl: 'https://remotedesktop.google.com/access',
-            setupSteps: [
-                'Acesse remotedesktop.google.com no computador da empresa',
-                'Clique em "Acesso Remoto" e depois em "Ativar"',
-                'Instale a extensão quando solicitado',
-                'Anote o PIN criado e salve no cadastro da empresa',
-            ],
-        },
-        teamviewer: {
-            label: 'TeamViewer',
-            icon: '🔌',
-            setupUrl: 'https://www.teamviewer.com/pt/download/',
-            setupSteps: [
-                'Baixe o TeamViewer no computador da empresa',
-                'Abra o TeamViewer — ele mostrará um ID e senha',
-                'Salve o ID e a senha no cadastro',
-            ],
-        },
+    function copyIp() {
+        navigator.clipboard.writeText(`${host}:${port}`)
+        toast.success('IP copiado!')
     }
 
-    const tool = tools[remoteTool] || tools.anydesk
-
-    // ── AnyDesk ──────────────────────────────────────────────────────────────
-    if (remoteTool === 'anydesk') {
-        const anyDeskDeepLink = remoteCode
-            ? `anydesk:${remoteCode.replace(/\s/g, '')}`
-            : null
-
-        return (
-            <div className="flex flex-col h-full -m-8">
-                <PortalBar
-                    company={company}
-                    badge="App Instalado · AnyDesk"
-                    badgeColor="bg-yellow-100 text-yellow-700"
-                />
-                <div className="flex-1 flex flex-col items-center justify-center gap-6 max-w-xl mx-auto text-center px-6 py-10">
-                    <div className="p-5 rounded-2xl bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-900">
-                        <Monitor className="h-12 w-12 text-yellow-500 mx-auto" />
-                    </div>
-
-                    <div>
-                        <h2 className="text-xl font-bold mb-1">{company.name}</h2>
-                        <p className="text-sm text-muted-foreground">
-                            Acesso remoto via AnyDesk. Escolha a forma de conectar abaixo.
-                        </p>
-                    </div>
-
-                    {remoteCode ? (
-                        <>
-                            {/* ID em destaque com copiar */}
-                            <div className="w-full bg-zinc-100 dark:bg-zinc-900 rounded-xl px-5 py-4 flex items-center justify-between gap-3 border">
-                                <div>
-                                    <p className="text-[11px] text-muted-foreground uppercase tracking-wider mb-0.5">ID AnyDesk</p>
-                                    <p className="text-2xl font-bold font-mono tracking-wider">{remoteCode}</p>
-                                </div>
-                                <button
-                                    onClick={() => {
-                                        navigator.clipboard.writeText(remoteCode)
-                                    }}
-                                    className="text-xs bg-white dark:bg-zinc-800 border rounded-lg px-3 py-2 hover:bg-zinc-50 transition-colors"
-                                >
-                                    Copiar
-                                </button>
-                            </div>
-
-                            {/* Opção 1: Deep Link — melhor opção */}
-                            <div className="w-full space-y-3">
-                                <div className="text-left">
-                                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Forma de conectar</p>
-                                </div>
-                                <a
-                                    href={anyDeskDeepLink!}
-                                    className="flex items-center gap-4 w-full bg-yellow-500 hover:bg-yellow-600 text-white rounded-xl px-5 py-4 transition-colors text-left"
-                                >
-                                    <span className="text-2xl">⚡</span>
-                                    <div className="flex-1">
-                                        <p className="font-semibold text-sm">Abrir com AnyDesk instalado</p>
-                                        <p className="text-xs opacity-80">Recomendado — abre o AnyDesk no seu computador e conecta direto ao ID {remoteCode}</p>
-                                    </div>
-                                    <ExternalLink className="h-4 w-4 opacity-70 shrink-0" />
-                                </a>
-
-                                {/* Opção 2: Web client em popup */}
-                                <button
-                                    onClick={() => openPopup('https://v.anydesk.com/', 'AnyDesk Web')}
-                                    className="flex items-center gap-4 w-full bg-white dark:bg-zinc-900 border hover:border-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-950/20 rounded-xl px-5 py-4 transition-colors text-left"
-                                >
-                                    <span className="text-2xl">🌐</span>
-                                    <div className="flex-1">
-                                        <p className="font-semibold text-sm">Abrir AnyDesk Web em popup</p>
-                                        <p className="text-xs text-muted-foreground">Digite o ID {remoteCode} na tela que abrir</p>
-                                    </div>
-                                    <ExternalLink className="h-4 w-4 text-muted-foreground shrink-0" />
-                                </button>
-                            </div>
-
-                            <p className="text-xs text-muted-foreground">
-                                💡 A opção ⚡ só funciona se o AnyDesk estiver instalado no <strong>seu</strong> computador.
-                                O computador remoto precisa estar ligado com o AnyDesk aberto.
-                            </p>
-                        </>
-                    ) : (
-                        <>
-                            <div className="w-full bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-900 rounded-xl p-4 text-left">
-                                <p className="font-semibold text-sm mb-2">⚠️ ID do AnyDesk não cadastrado</p>
-                                <p className="text-xs text-muted-foreground">Edite a empresa e adicione o ID do AnyDesk no campo "Código de Acesso".</p>
-                            </div>
-                            <ol className="text-sm text-left space-y-2 w-full max-w-sm">
-                                {tool.setupSteps.map((step, i) => (
-                                    <li key={i} className="flex gap-3">
-                                        <span className="h-6 w-6 rounded-full bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-200 flex items-center justify-center text-xs font-bold shrink-0">{i + 1}</span>
-                                        <span className="text-muted-foreground text-xs pt-1">{step}</span>
-                                    </li>
-                                ))}
-                            </ol>
-                            <div className="flex gap-3">
-                                <a
-                                    href={tool.setupUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-2 bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-2.5 px-5 rounded-xl transition-colors text-sm"
-                                >
-                                    <ExternalLink className="h-4 w-4" />
-                                    Baixar AnyDesk
-                                </a>
-                                <Button variant="outline" onClick={() => router.push('/app/companies')}>
-                                    Cadastrar ID
-                                </Button>
-                            </div>
-                        </>
-                    )}
-                </div>
-            </div>
-        )
-    }
-
-
-    // TeamViewer web
-    if (remoteTool === 'teamviewer') {
-        return (
-            <div className="flex flex-col h-full -m-8">
-                <PortalBar company={company} badge="App Instalado · TeamViewer" badgeColor="bg-blue-100 text-blue-700" />
-                <iframe
-                    src="https://web.teamviewer.com/"
-                    className="flex-1 w-full border-0"
-                    title="TeamViewer Web"
-                    allow="fullscreen; camera; microphone"
-                    sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
-                />
-            </div>
-        )
-    }
-
-    // Chrome Remote Desktop
     return (
         <div className="flex flex-col h-full -m-8">
-            <PortalBar
-                company={company}
-                badge="App Instalado · Chrome Remote Desktop"
-                badgeColor="bg-green-100 text-green-700"
-                extra={
-                    <Button
-                        size="sm"
-                        onClick={() => openPopup('https://remotedesktop.google.com/access', 'Chrome Remote Desktop')}
-                    >
-                        <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-                        Abrir Chrome Remote Desktop
-                    </Button>
-                }
-            />
-            <div className="flex-1 flex flex-col items-center justify-center gap-6 px-6 text-center max-w-xl mx-auto py-10">
-                <div className="p-5 rounded-2xl bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-900">
-                    <Monitor className="h-12 w-12 text-green-500 mx-auto" />
+            <PortalBar company={company} badge="Acesso Remoto (RDP)" badgeColor="bg-blue-100 text-blue-700" />
+            <div className="flex-1 flex flex-col items-center justify-center gap-6 max-w-lg mx-auto text-center px-6 py-10">
+                <div className="p-5 rounded-2xl bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-900">
+                    <Monitor className="h-12 w-12 text-blue-500 mx-auto" />
                 </div>
+
                 <div>
-                    <h2 className="text-xl font-bold mb-2">Chrome Remote Desktop</h2>
+                    <h2 className="text-xl font-bold mb-1">{company.name}</h2>
                     <p className="text-sm text-muted-foreground">
-                        O Chrome Remote Desktop requer autenticação Google e não pode ser embutido diretamente.
-                        Clique no botão abaixo para abrir em uma janela popup.
+                        Conexão via Remote Desktop Protocol (RDP)
                     </p>
                 </div>
-                <Button
-                    size="lg"
-                    onClick={() => openPopup('https://remotedesktop.google.com/access', 'Chrome Remote Desktop')}
-                    className="bg-green-600 hover:bg-green-700 text-white"
-                >
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    Abrir em Janela Popup
-                </Button>
-                {remoteCode && (
-                    <p className="text-xs text-muted-foreground bg-zinc-100 dark:bg-zinc-900 rounded-xl px-4 py-3">
-                        💡 PIN salvo: <strong>{remoteCode}</strong>
-                    </p>
+
+                {host ? (
+                    <>
+                        {/* Info da conexão */}
+                        <div className="w-full grid grid-cols-2 gap-3">
+                            <div className="bg-zinc-100 dark:bg-zinc-900 rounded-xl p-4 text-left border">
+                                <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Host / IP</p>
+                                <p className="font-mono font-bold text-sm">{host}</p>
+                            </div>
+                            <div className="bg-zinc-100 dark:bg-zinc-900 rounded-xl p-4 text-left border">
+                                <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Porta</p>
+                                <p className="font-mono font-bold text-sm">{port}</p>
+                            </div>
+                            {user && (
+                                <div className="col-span-2 bg-zinc-100 dark:bg-zinc-900 rounded-xl p-4 text-left border">
+                                    <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Usuário</p>
+                                    <p className="font-mono font-bold text-sm">{user}</p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Ações */}
+                        <div className="flex flex-col gap-3 w-full">
+                            <Button
+                                size="lg"
+                                className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                                onClick={() => downloadRdp(host, port, user, company.name)}
+                            >
+                                <Download className="h-4 w-4 mr-2" />
+                                Baixar Arquivo RDP
+                            </Button>
+                            <Button
+                                size="lg"
+                                variant="outline"
+                                className="w-full"
+                                onClick={copyIp}
+                            >
+                                <Copy className="h-4 w-4 mr-2" />
+                                Copiar IP ({host}:{port})
+                            </Button>
+                        </div>
+
+                        <div className="text-xs text-muted-foreground border-t w-full pt-4 space-y-1">
+                            <p>💡 Abra o arquivo .rdp baixado para iniciar a conexão Remote Desktop.</p>
+                            <p>🔒 A senha não é armazenada — será solicitada pelo Windows ao conectar.</p>
+                        </div>
+                    </>
+                ) : (
+                    <div className="w-full bg-orange-50 dark:bg-orange-950/30 border border-orange-200 rounded-xl p-4 text-sm text-center">
+                        Nenhum host configurado. Edite a empresa para adicionar o IP/Host.
+                    </div>
                 )}
             </div>
         </div>
     )
 }
 
-// ─── Main Portal Page ─────────────────────────────────────────────────────────
+// ── Main Portal ───────────────────────────────────────────────────────────────
 export default function CompanyPortalPage() {
     const { companies } = useAppContext()
     const params = useParams()
@@ -291,51 +170,9 @@ export default function CompanyPortalPage() {
         )
     }
 
-    // ── Desktop / App Instalado ───────────────────────────────────────────────
-    if (company.system_type === 'desktop') {
-        return <DesktopPanel company={company} />
-    }
-
-    // ── Acesso Remoto / Popup ─────────────────────────────────────────────────
-    if (company.system_type === 'remote') {
-        return (
-            <div className="flex flex-col h-full -m-8">
-                <PortalBar
-                    company={company}
-                    badge="Sessão Remota"
-                    badgeColor="bg-purple-100 text-purple-700"
-                />
-                <div className="flex-1 flex flex-col items-center justify-center gap-6 max-w-lg mx-auto text-center px-6">
-                    <div className="p-5 rounded-2xl bg-purple-50 dark:bg-purple-950 border border-purple-200 dark:border-purple-900">
-                        <Wifi className="h-12 w-12 text-purple-500 mx-auto" />
-                    </div>
-                    <div>
-                        <h2 className="text-2xl font-bold mb-2">{company.name}</h2>
-                        <p className="text-sm text-muted-foreground">
-                            Sistema configurado como <strong>Sessão Remota</strong> (Salesforce, ERP com SSO, etc.).
-                            Abrirá em uma janela popup separada para que o login funcione corretamente.
-                        </p>
-                    </div>
-                    {company.system_url ? (
-                        <Button
-                            size="lg"
-                            className="bg-purple-600 hover:bg-purple-700 text-white"
-                            onClick={() => openPopup(company.system_url!, company.name)}
-                        >
-                            <ExternalLink className="h-4 w-4 mr-2" />
-                            Abrir {company.name} em Popup
-                        </Button>
-                    ) : (
-                        <p className="text-sm text-muted-foreground">
-                            Nenhum link configurado. Edite a empresa e adicione a URL.
-                        </p>
-                    )}
-                    <p className="text-xs text-muted-foreground border-t w-full pt-4">
-                        💡 Dica: Se for Salesforce, ERP ou qualquer sistema com login SSO, este é o modo correto — o login SSO não funciona dentro de iframes por restrições de segurança do navegador.
-                    </p>
-                </div>
-            </div>
-        )
+    // ── Acesso Remoto RDP ─────────────────────────────────────────────────────
+    if (company.system_type === 'rdp') {
+        return <RdpPanel company={company} />
     }
 
     // ── Sem URL configurada ───────────────────────────────────────────────────
@@ -344,18 +181,50 @@ export default function CompanyPortalPage() {
             <div className="flex flex-col items-center justify-center h-full gap-4 text-muted-foreground">
                 <AlertCircle className="h-10 w-10 text-yellow-500" />
                 <h2 className="text-xl font-semibold text-foreground">Nenhum sistema configurado</h2>
-                <p className="text-sm max-w-sm text-center">
-                    A empresa <strong>{company.name}</strong> ainda não tem sistema cadastrado.
+                <p className="text-sm max-w-xs text-center">
+                    Edite a empresa e adicione a URL do sistema.
                 </p>
                 <Button variant="outline" onClick={() => router.push('/app/companies')}>
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Editar empresa
+                    <ArrowLeft className="h-4 w-4 mr-2" />Editar empresa
                 </Button>
             </div>
         )
     }
 
-    // ── Sistema Web via Proxy ─────────────────────────────────────────────────
+    // ── Sistema Web: nova aba ─────────────────────────────────────────────────
+    if (company.open_in_new_tab) {
+        return (
+            <div className="flex flex-col h-full -m-8">
+                <PortalBar
+                    company={company}
+                    badge="Sistema Web"
+                    badgeColor="bg-zinc-100 text-zinc-600"
+                />
+                <div className="flex-1 flex flex-col items-center justify-center gap-6 max-w-md mx-auto text-center px-6">
+                    <div className="p-5 rounded-2xl bg-zinc-100 dark:bg-zinc-900 border">
+                        <ExternalLink className="h-10 w-10 text-zinc-500 mx-auto" />
+                    </div>
+                    <div>
+                        <h2 className="text-xl font-bold mb-1">{company.name}</h2>
+                        <p className="text-sm text-muted-foreground">{company.system_url}</p>
+                    </div>
+                    <Button
+                        size="lg"
+                        className="w-full max-w-xs"
+                        onClick={() => openPopup(company.system_url!, company.name)}
+                    >
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        Abrir {company.name}
+                    </Button>
+                    <p className="text-xs text-muted-foreground">
+                        Abrirá em uma janela popup — recomendado para sistemas com SSO (Salesforce, etc.)
+                    </p>
+                </div>
+            </div>
+        )
+    }
+
+    // ── Sistema Web: iframe via proxy ─────────────────────────────────────────
     const proxyUrl = `/api/proxy?url=${encodeURIComponent(company.system_url)}`
 
     return (
@@ -366,19 +235,12 @@ export default function CompanyPortalPage() {
                 badgeColor="bg-zinc-100 text-zinc-600"
                 extra={
                     <div className="flex items-center gap-2">
-                        <button
-                            onClick={handleReload}
-                            className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
-                            title="Recarregar"
-                        >
+                        <button onClick={handleReload} title="Recarregar"
+                            className="text-muted-foreground hover:text-foreground transition-colors">
                             <RefreshCw className="h-3.5 w-3.5" />
                         </button>
-                        <a
-                            href={company.system_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5"
-                        >
+                        <a href={company.system_url} target="_blank" rel="noopener noreferrer"
+                            className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 text-xs">
                             <ExternalLink className="h-3.5 w-3.5" />
                             <span className="hidden sm:inline">Nova aba</span>
                         </a>
@@ -387,25 +249,22 @@ export default function CompanyPortalPage() {
             />
 
             {proxyFailed ? (
-                <div className="flex-1 flex flex-col items-center justify-center gap-6 p-8 text-center max-w-lg mx-auto">
+                <div className="flex-1 flex flex-col items-center justify-center gap-6 p-8 text-center max-w-md mx-auto">
                     <AlertCircle className="h-12 w-12 text-orange-400" />
                     <div>
-                        <h2 className="text-xl font-bold mb-2">Sistema bloqueou o acesso embutido</h2>
+                        <h2 className="text-xl font-bold mb-2">Sistema bloqueou o acesso</h2>
                         <p className="text-sm text-muted-foreground">
-                            O servidor bloqueia a exibição dentro de outros sistemas por proteção de segurança.
-                            Se for um sistema com SSO (Salesforce, ERP, etc.), configure-o como <strong>Sessão Remota</strong>.
+                            O servidor recusou ser exibido dentro de outro site.
+                            Use a opção de <strong>"Abrir em nova aba"</strong> no cadastro da empresa.
                         </p>
                     </div>
-                    <div className="flex flex-col sm:flex-row gap-3 w-full max-w-xs">
-                        <Button
-                            className="flex-1"
-                            onClick={() => openPopup(company.system_url!, company.name)}
-                        >
+                    <div className="flex flex-col gap-3 w-full max-w-xs">
+                        <Button onClick={() => openPopup(company.system_url!, company.name)}>
                             <ExternalLink className="h-4 w-4 mr-2" />
                             Abrir em Popup
                         </Button>
-                        <Button variant="outline" className="flex-1" onClick={() => router.push('/app/companies')}>
-                            Alterar tipo
+                        <Button variant="outline" onClick={() => router.push('/app/companies')}>
+                            Alterar configuração
                         </Button>
                     </div>
                 </div>

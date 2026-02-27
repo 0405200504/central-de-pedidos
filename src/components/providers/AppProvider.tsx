@@ -9,8 +9,10 @@ interface Company {
     logo_url?: string
     system_url?: string
     system_type?: string
-    remote_tool?: string
-    remote_code?: string
+    open_in_new_tab?: boolean
+    rdp_host?: string
+    rdp_port?: number
+    rdp_user?: string
 }
 
 interface AppContextType {
