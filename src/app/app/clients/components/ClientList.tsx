@@ -16,6 +16,10 @@ import { Search } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
+import { ClientDialog } from './ClientDialog'
+import { DeleteClientButton } from './DeleteClientButton'
+import { ClientStatusSelect } from './ClientStatusSelect'
+
 export function ClientList({ initialClients }: { initialClients: any[] }) {
     const { activeCompany } = useAppContext()
     const [searchTerm, setSearchTerm] = useState('')
@@ -101,14 +105,16 @@ export function ClientList({ initialClients }: { initialClients: any[] }) {
                                         {client.cidade || '-'} {client.estado ? `/ ${client.estado}` : ''}
                                     </TableCell>
                                     <TableCell>
-                                        <Badge variant={client.status === 'ativo' ? 'default' : 'secondary'}>
-                                            {client.status}
-                                        </Badge>
+                                        <ClientStatusSelect clientId={client.id} currentStatus={client.status} />
                                     </TableCell>
                                     <TableCell className="text-right">
                                         {client.created_at
                                             ? format(new Date(client.created_at), 'dd/MM/yyyy', { locale: ptBR })
                                             : '-'}
+                                    </TableCell>
+                                    <TableCell className="text-right flex items-center justify-end gap-2">
+                                        <ClientDialog client={client} />
+                                        <DeleteClientButton clientId={client.id} clientName={client.nome_razao_social} />
                                     </TableCell>
                                 </TableRow>
                             ))

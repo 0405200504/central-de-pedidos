@@ -18,6 +18,7 @@ import { ptBR } from 'date-fns/locale'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { DeleteOrderButton } from './DeleteOrderButton'
+import { OrderStatusSelect } from './OrderStatusSelect'
 
 export function OrderList({ initialOrders }: { initialOrders: any[] }) {
     const { activeCompany } = useAppContext()
@@ -107,9 +108,7 @@ export function OrderList({ initialOrders }: { initialOrders: any[] }) {
                                             : '-'}
                                     </TableCell>
                                     <TableCell>
-                                        <Badge className={`${getStatusColor(order.status)}`}>
-                                            {order.status}
-                                        </Badge>
+                                        <OrderStatusSelect orderId={order.id} currentStatus={order.status} />
                                     </TableCell>
                                     <TableCell className="text-right flex items-center justify-end gap-2">
                                         <Link href={`/app/orders/${order.id}/edit`}>

@@ -126,3 +126,20 @@ export async function updateCompany(companyId: string, formData: FormData) {
     revalidatePath('/app', 'layout')
     return { success: true }
 }
+
+export async function updateCompanyStatus(companyId: string, status: string) {
+    const supabase = await createClient()
+
+    const { error } = await supabase
+        .from('companies')
+        .update({ status })
+        .eq('id', companyId)
+
+    if (error) {
+        console.error(error)
+        return { error: 'Erro ao atualizar status da empresa.' }
+    }
+
+    revalidatePath('/app', 'layout')
+    return { success: true }
+}

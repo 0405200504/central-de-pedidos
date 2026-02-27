@@ -16,6 +16,7 @@ import { Search } from 'lucide-react'
 
 import { ProductDialog } from './ProductDialog'
 import { DeleteProductButton } from './DeleteProductButton'
+import { ProductStatusSelect } from './ProductStatusSelect'
 
 export function ProductList({ initialProducts }: { initialProducts: any[] }) {
     const { activeCompany } = useAppContext()
@@ -89,9 +90,7 @@ export function ProductList({ initialProducts }: { initialProducts: any[] }) {
                                     </TableCell>
                                     <TableCell>{product.ncm || '-'}</TableCell>
                                     <TableCell>
-                                        <Badge variant={product.status === 'ativo' ? 'default' : 'secondary'}>
-                                            {product.status}
-                                        </Badge>
+                                        <ProductStatusSelect productId={product.id} currentStatus={product.status} />
                                     </TableCell>
                                     <TableCell className="text-right flex items-center justify-end gap-2">
                                         <ProductDialog product={product} />

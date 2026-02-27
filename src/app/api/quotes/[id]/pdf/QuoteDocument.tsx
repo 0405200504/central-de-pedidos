@@ -58,7 +58,7 @@ export const QuoteDocument = ({ quote, company, client, items }: any) => {
                     <View style={styles.quoteInfo}>
                         <Text style={styles.quoteTitle}>ORÇAMENTO</Text>
                         <Text>Nº {quote.number}</Text>
-                        <Text>Data: {format(new Date(quote.issued_at), 'dd/MM/yyyy')}</Text>
+                        {quote.issued_at && <Text>Data: {format(new Date(quote.issued_at), 'dd/MM/yyyy')}</Text>}
                         {quote.valid_until && <Text>Validade: {format(new Date(quote.valid_until), 'dd/MM/yyyy')}</Text>}
                     </View>
                 </View>

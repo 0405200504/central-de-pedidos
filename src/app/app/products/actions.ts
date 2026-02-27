@@ -82,3 +82,20 @@ export async function updateProductAction(productId: string, formData: FormData)
     revalidatePath('/app/products')
     return { success: true }
 }
+
+export async function updateProductStatusAction(productId: string, status: string) {
+    const supabase = await createClient()
+
+    const { error } = await supabase
+        .from('products')
+        .update({ status })
+        .eq('id', productId)
+
+    if (error) {
+        console.error(error)
+        return { error: 'Erro ao atualizar status do produto.' }
+    }
+
+    revalidatePath('/app/products')
+    return { success: true }
+}

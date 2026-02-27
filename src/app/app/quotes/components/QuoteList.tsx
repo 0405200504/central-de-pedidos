@@ -16,7 +16,6 @@ import { Button } from '@/components/ui/button'
 import { Search, FileText, Download, Edit } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { generateQuotePdfAction } from '../actions'
 import { toast } from 'sonner'
 import { QuoteStatusSelect } from './QuoteStatusSelect'
 import { DeleteQuoteButton } from './DeleteQuoteButton'
@@ -50,16 +49,35 @@ export function QuoteList({ initialQuotes }: { initialQuotes: any[] }) {
         }
     }
 
-    const handleGeneratePdf = async (quoteId: string) => {
+    const handleGeneratePdf = async (quoteId: string, quoteNumber: number) => {
         if (!activeCompany) return
         setLoadingPdf(quoteId)
-        const res = await generateQuotePdfAction(quoteId, activeCompany.id)
-        setLoadingPdf(null)
 
-        if (res?.error) {
-            toast.error(res.error)
-        } else {
-            toast.success('PDF Gerado com sucesso!')
+        try {
+            const res = await fetch(`/api/quotes/${quoteId}/pdf`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ companyId: activeCompany.id }),
+            })
+
+            if (!res.ok) {
+                const err = await res.json()
+                toast.error(err.error || 'Erro ao gerar PDF')
+                return
+            }
+
+            const blob = await res.blob()
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `orcamento-${quoteNumber}.pdf`
+            a.click()
+            URL.revokeObjectURL(url)
+            toast.success('PDF baixado com sucesso!')
+        } catch (err) {
+            toast.error('Erro ao gerar PDF')
+        } finally {
+            setLoadingPdf(null)
         }
     }
 
@@ -123,23 +141,15 @@ export function QuoteList({ initialQuotes }: { initialQuotes: any[] }) {
                                         <QuoteStatusSelect quoteId={quote.id} currentStatus={quote.status} />
                                     </TableCell>
                                     <TableCell className="text-right flex items-center justify-end gap-2">
-                                        {quote.pdf_url ? (
-                                            <a href={quote.pdf_url} target="_blank" rel="noopener noreferrer">
-                                                <Button variant="outline" size="sm">
-                                                    <Download className="h-4 w-4 mr-1" /> Baixar
-                                                </Button>
-                                            </a>
-                                        ) : (
-                                            <Button
-                                                variant="secondary"
-                                                size="sm"
-                                                disabled={loadingPdf === quote.id}
-                                                onClick={() => handleGeneratePdf(quote.id)}
-                                            >
-                                                <FileText className="h-4 w-4 mr-1" />
-                                                {loadingPdf === quote.id ? 'Gerando...' : 'Gerar PDF'}
-                                            </Button>
-                                        )}
+                                        <Button
+                                            variant="secondary"
+                                            size="sm"
+                                            disabled={loadingPdf === quote.id}
+                                            onClick={() => handleGeneratePdf(quote.id, quote.number)}
+                                        >
+                                            <FileText className="h-4 w-4 mr-1" />
+                                            {loadingPdf === quote.id ? 'Gerando...' : 'Baixar PDF'}
+                                        </Button>
                                         <Button variant="outline" size="icon" onClick={() => window.location.href = `/app/quotes/${quote.id}/edit`}>
                                             <Edit className="h-4 w-4" />
                                         </Button>

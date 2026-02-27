@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { CompanyDialog } from './components/CompanyDialog'
 import { DeleteCompanyButton } from './components/DeleteCompanyButton'
+import { CompanyStatusSelect } from './components/CompanyStatusSelect'
 import {
     Table,
     TableBody,
@@ -18,7 +19,7 @@ export default async function CompaniesPage() {
     // Find the companies this user is a member of
     const { data: members, error } = await supabase
         .from('company_members')
-        .select('role, companies ( id, name, legal_name, cnpj, created_at )')
+        .select('role, companies ( id, name, legal_name, cnpj, status, created_at )')
 
     const companiesData = members?.map(m => m.companies) || []
 
@@ -41,6 +42,7 @@ export default async function CompaniesPage() {
                             <TableHead>Nome</TableHead>
                             <TableHead>Razão Social</TableHead>
                             <TableHead>CNPJ</TableHead>
+                            <TableHead>Status</TableHead>
                             <TableHead>Cadastrada em</TableHead>
                             <TableHead className="w-[100px] text-right">Ações</TableHead>
                         </TableRow>
@@ -48,7 +50,7 @@ export default async function CompaniesPage() {
                     <TableBody>
                         {companiesData.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={5} className="h-24 text-center">
+                                <TableCell colSpan={6} className="h-24 text-center">
                                     Nenhuma empresa cadastrada.
                                 </TableCell>
                             </TableRow>
@@ -58,6 +60,9 @@ export default async function CompaniesPage() {
                                     <TableCell className="font-medium">{company.name}</TableCell>
                                     <TableCell>{company.legal_name || '-'}</TableCell>
                                     <TableCell>{company.cnpj || '-'}</TableCell>
+                                    <TableCell>
+                                        <CompanyStatusSelect companyId={company.id} currentStatus={company.status || 'ativo'} />
+                                    </TableCell>
                                     <TableCell>
                                         {company.created_at
                                             ? format(new Date(company.created_at), 'dd/MM/yyyy', { locale: ptBR })
