@@ -89,48 +89,90 @@ function DesktopPanel({ company }: { company: any }) {
 
     const tool = tools[remoteTool] || tools.anydesk
 
-    // AnyDesk webclient embed
+    // ── AnyDesk ──────────────────────────────────────────────────────────────
     if (remoteTool === 'anydesk') {
+        const anyDeskDeepLink = remoteCode
+            ? `anydesk:${remoteCode.replace(/\s/g, '')}`
+            : null
+
         return (
             <div className="flex flex-col h-full -m-8">
                 <PortalBar
                     company={company}
                     badge="App Instalado · AnyDesk"
                     badgeColor="bg-yellow-100 text-yellow-700"
-                    extra={
-                        <a
-                            href="https://v.anydesk.com/"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
-                        >
-                            <ExternalLink className="h-3.5 w-3.5" />
-                            Nova aba
-                        </a>
-                    }
                 />
-                <div className="flex flex-col flex-1 overflow-hidden">
+                <div className="flex-1 flex flex-col items-center justify-center gap-6 max-w-xl mx-auto text-center px-6 py-10">
+                    <div className="p-5 rounded-2xl bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-900">
+                        <Monitor className="h-12 w-12 text-yellow-500 mx-auto" />
+                    </div>
+
+                    <div>
+                        <h2 className="text-xl font-bold mb-1">{company.name}</h2>
+                        <p className="text-sm text-muted-foreground">
+                            Acesso remoto via AnyDesk. Escolha a forma de conectar abaixo.
+                        </p>
+                    </div>
+
                     {remoteCode ? (
                         <>
-                            <div className="px-5 py-2 bg-yellow-50 dark:bg-yellow-950/20 border-b text-xs text-yellow-800 dark:text-yellow-200 flex items-center gap-2">
-                                <span>⚡ ID AnyDesk cadastrado: <strong>{remoteCode}</strong> — insira-o no campo abaixo para conectar.</span>
+                            {/* ID em destaque com copiar */}
+                            <div className="w-full bg-zinc-100 dark:bg-zinc-900 rounded-xl px-5 py-4 flex items-center justify-between gap-3 border">
+                                <div>
+                                    <p className="text-[11px] text-muted-foreground uppercase tracking-wider mb-0.5">ID AnyDesk</p>
+                                    <p className="text-2xl font-bold font-mono tracking-wider">{remoteCode}</p>
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        navigator.clipboard.writeText(remoteCode)
+                                    }}
+                                    className="text-xs bg-white dark:bg-zinc-800 border rounded-lg px-3 py-2 hover:bg-zinc-50 transition-colors"
+                                >
+                                    Copiar
+                                </button>
                             </div>
-                            <iframe
-                                src="https://v.anydesk.com/"
-                                className="flex-1 w-full border-0"
-                                title="AnyDesk Web"
-                                allow="fullscreen; camera; microphone"
-                                sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
-                            />
+
+                            {/* Opção 1: Deep Link — melhor opção */}
+                            <div className="w-full space-y-3">
+                                <div className="text-left">
+                                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Forma de conectar</p>
+                                </div>
+                                <a
+                                    href={anyDeskDeepLink!}
+                                    className="flex items-center gap-4 w-full bg-yellow-500 hover:bg-yellow-600 text-white rounded-xl px-5 py-4 transition-colors text-left"
+                                >
+                                    <span className="text-2xl">⚡</span>
+                                    <div className="flex-1">
+                                        <p className="font-semibold text-sm">Abrir com AnyDesk instalado</p>
+                                        <p className="text-xs opacity-80">Recomendado — abre o AnyDesk no seu computador e conecta direto ao ID {remoteCode}</p>
+                                    </div>
+                                    <ExternalLink className="h-4 w-4 opacity-70 shrink-0" />
+                                </a>
+
+                                {/* Opção 2: Web client em popup */}
+                                <button
+                                    onClick={() => openPopup('https://v.anydesk.com/', 'AnyDesk Web')}
+                                    className="flex items-center gap-4 w-full bg-white dark:bg-zinc-900 border hover:border-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-950/20 rounded-xl px-5 py-4 transition-colors text-left"
+                                >
+                                    <span className="text-2xl">🌐</span>
+                                    <div className="flex-1">
+                                        <p className="font-semibold text-sm">Abrir AnyDesk Web em popup</p>
+                                        <p className="text-xs text-muted-foreground">Digite o ID {remoteCode} na tela que abrir</p>
+                                    </div>
+                                    <ExternalLink className="h-4 w-4 text-muted-foreground shrink-0" />
+                                </button>
+                            </div>
+
+                            <p className="text-xs text-muted-foreground">
+                                💡 A opção ⚡ só funciona se o AnyDesk estiver instalado no <strong>seu</strong> computador.
+                                O computador remoto precisa estar ligado com o AnyDesk aberto.
+                            </p>
                         </>
                     ) : (
-                        <div className="flex-1 flex flex-col items-center justify-center gap-6 px-6 text-center max-w-xl mx-auto py-10">
-                            <div className="p-5 rounded-2xl bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-900">
-                                <Monitor className="h-12 w-12 text-yellow-500 mx-auto" />
-                            </div>
-                            <div>
-                                <h2 className="text-xl font-bold mb-2">Configure o AnyDesk primeiro</h2>
-                                <p className="text-sm text-muted-foreground">Siga os passos abaixo no computador onde o sistema está instalado:</p>
+                        <>
+                            <div className="w-full bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-900 rounded-xl p-4 text-left">
+                                <p className="font-semibold text-sm mb-2">⚠️ ID do AnyDesk não cadastrado</p>
+                                <p className="text-xs text-muted-foreground">Edite a empresa e adicione o ID do AnyDesk no campo "Código de Acesso".</p>
                             </div>
                             <ol className="text-sm text-left space-y-2 w-full max-w-sm">
                                 {tool.setupSteps.map((step, i) => (
@@ -151,15 +193,16 @@ function DesktopPanel({ company }: { company: any }) {
                                     Baixar AnyDesk
                                 </a>
                                 <Button variant="outline" onClick={() => router.push('/app/companies')}>
-                                    Salvar ID cadastrado
+                                    Cadastrar ID
                                 </Button>
                             </div>
-                        </div>
+                        </>
                     )}
                 </div>
             </div>
         )
     }
+
 
     // TeamViewer web
     if (remoteTool === 'teamviewer') {
