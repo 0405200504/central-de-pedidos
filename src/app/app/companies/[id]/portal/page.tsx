@@ -224,11 +224,9 @@ export default function CompanyPortalPage() {
         )
     }
 
-    // ── Sistema Web: iframe via proxy ─────────────────────────────────────────
-    const proxyUrl = `/api/proxy?url=${encodeURIComponent(company.system_url)}`
-
+    // ── Sistema Web: iframe direto ─────────────────────────────────────────
     return (
-        <div className="flex flex-col h-full -m-8">
+        <div className="flex flex-col h-full -m-8 relative group">
             <PortalBar
                 company={company}
                 badge="Sistema Web"
@@ -237,48 +235,31 @@ export default function CompanyPortalPage() {
                     <div className="flex items-center gap-2">
                         <button onClick={handleReload} title="Recarregar"
                             className="text-muted-foreground hover:text-foreground transition-colors">
-                            <RefreshCw className="h-3.5 w-3.5" />
+                            <RefreshCw className="h-4 w-4" />
                         </button>
-                        <a href={company.system_url} target="_blank" rel="noopener noreferrer"
-                            className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 text-xs">
-                            <ExternalLink className="h-3.5 w-3.5" />
-                            <span className="hidden sm:inline">Nova aba</span>
-                        </a>
                     </div>
                 }
             />
 
-            {proxyFailed ? (
-                <div className="flex-1 flex flex-col items-center justify-center gap-6 p-8 text-center max-w-md mx-auto">
-                    <AlertCircle className="h-12 w-12 text-orange-400" />
-                    <div>
-                        <h2 className="text-xl font-bold mb-2">Sistema bloqueou o acesso</h2>
-                        <p className="text-sm text-muted-foreground">
-                            O servidor recusou ser exibido dentro de outro site.
-                            Use a opção de <strong>"Abrir em nova aba"</strong> no cadastro da empresa.
-                        </p>
-                    </div>
-                    <div className="flex flex-col gap-3 w-full max-w-xs">
-                        <Button onClick={() => openPopup(company.system_url!, company.name)}>
-                            <ExternalLink className="h-4 w-4 mr-2" />
-                            Abrir em Popup
-                        </Button>
-                        <Button variant="outline" onClick={() => router.push('/app/companies')}>
-                            Alterar configuração
-                        </Button>
-                    </div>
-                </div>
-            ) : (
-                <iframe
-                    key={`${proxyUrl}-${reloadKey}`}
-                    src={proxyUrl}
-                    className="flex-1 w-full border-0"
-                    title={`Sistema de ${company.name}`}
-                    onError={() => setProxyFailed(true)}
-                    allow="fullscreen; camera; microphone"
-                    sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads"
-                />
-            )}
+            {/* Banner de fallback caso a tela fique branca (site bloqueando iframe) */}
+            <div className="absolute top-[60px] left-0 right-0 bg-yellow-50 dark:bg-yellow-950/40 border-b border-yellow-200 dark:border-yellow-900/50 p-3 text-center flex items-center justify-center gap-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                <span className="text-xs text-yellow-800 dark:text-yellow-200">
+                    A tela ficou em branco? O sistema {company.name} pode ter bloqueado o acesso embutido.
+                </span>
+                <Button size="sm" variant="outline" className="h-8 text-xs bg-white text-black" onClick={() => openPopup(company.system_url!, company.name)}>
+                    <ExternalLink className="h-3.5 w-3.5 mr-1" />
+                    Abrir em nova janela
+                </Button>
+            </div>
+
+            <iframe
+                key={`${company.system_url}-${reloadKey}`}
+                src={company.system_url}
+                className="flex-1 w-full border-0 bg-white"
+                title={`Sistema de ${company.name}`}
+                allow="fullscreen; camera; microphone; clipboard-read; clipboard-write"
+                sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads"
+            />
         </div>
     )
 }
