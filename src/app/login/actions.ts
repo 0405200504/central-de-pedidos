@@ -4,11 +4,22 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 
+function checkEnvVars() {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+    if (!supabaseUrl || !supabaseKey || supabaseUrl.includes('placeholder')) {
+        return 'Para criar conta ou entrar, configure as variáveis NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY na Vercel.'
+    }
+    return null
+}
+
 export async function login(formData: FormData) {
+    const envError = checkEnvVars()
+    if (envError) return { error: envError }
+
     const supabase = await createClient()
 
-    // type-casting here for convenience
-    // in practice, you should validate your inputs
     const data = {
         email: formData.get('email') as string,
         password: formData.get('password') as string,
@@ -17,6 +28,9 @@ export async function login(formData: FormData) {
     const { error } = await supabase.auth.signInWithPassword(data)
 
     if (error) {
+        if (error.message.includes('Invalid login credentials')) {
+            return { error: 'E-mail ou senha incorretos, ou e-mail ainda não confirmado.' }
+        }
         return { error: error.message }
     }
 
@@ -25,6 +39,9 @@ export async function login(formData: FormData) {
 }
 
 export async function signup(formData: FormData) {
+    const envError = checkEnvVars()
+    if (envError) return { error: envError }
+
     const supabase = await createClient()
 
     const data = {
@@ -32,12 +49,17 @@ export async function signup(formData: FormData) {
         password: formData.get('password') as string,
     }
 
-    // To auto confirm emails for testing locally:
-    // Update auth settings in your supabase dash or insert a hook
-    const { error } = await supabase.auth.signUp(data)
+    const { data: authData, error } = await supabase.auth.signUp(data)
 
     if (error) {
+        if (error.message.includes('User already registered')) {
+            return { error: 'Este e-mail já está cadastrado.' }
+        }
         return { error: error.message }
+    }
+
+    if (authData.user && !authData.session) {
+        return { error: 'Conta criada! Confirme seu e-mail (verifique sua caixa de entrada e spam) e depois faça o login.' }
     }
 
     revalidatePath('/', 'layout')

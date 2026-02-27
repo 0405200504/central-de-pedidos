@@ -24,6 +24,7 @@ export default function LoginPage() {
         })
         if (error) {
             console.error(error)
+            alert("Erro ao entrar com Google: " + error.message)
             setLoadingGoogle(false)
         }
     }
