@@ -146,3 +146,82 @@ export async function generateQuotePdfAction(quoteId: string, companyId: string)
         return { error: error.message || 'Erro ao gerar PDF.' }
     }
 }
+
+export async function updateQuoteAction(
+    quoteId: string,
+    companyId: string,
+    clientId: string,
+    items: any[],
+    data: any
+) {
+    const supabase = await createClient()
+
+    // Calculate totals
+    let subtotal = 0
+    let discount_total = parseFloat(data.discount_total || '0')
+    let tax_total = parseFloat(data.tax_total || '0')
+    let shipping_total = parseFloat(data.shipping_total || '0')
+
+    for (const item of items) {
+        subtotal += (item.qty * item.unit_price) - (item.discounts || 0)
+        tax_total += (item.taxes || 0)
+    }
+
+    const total = subtotal - discount_total + tax_total + shipping_total
+
+    // 1. Update Quote
+    const { error: quoteError } = await supabase
+        .from('quotes')
+        .update({
+            client_id: clientId,
+            status: data.status || 'draft',
+            valid_until: data.valid_until || null,
+            subtotal,
+            discount_total,
+            tax_total,
+            shipping_total,
+            total,
+            payment_terms: data.payment_terms,
+            delivery_time: data.delivery_time,
+            freight_type: data.freight_type,
+            carrier: data.carrier,
+            notes_commercial: data.notes_commercial,
+            notes_fiscal: data.notes_fiscal,
+        })
+        .eq('id', quoteId)
+
+    if (quoteError) {
+        console.error('Quote update error:', quoteError)
+        return { error: 'Erro ao atualizar orçamento.' }
+    }
+
+    // 2. Delete old Items
+    await supabase.from('quote_items').delete().eq('quote_id', quoteId)
+
+    // 3. Insert new Items
+    const quoteItemsData = items.map(item => ({
+        quote_id: quoteId,
+        product_id: item.product_id || null,
+        name: item.name,
+        description: item.description,
+        ncm: item.ncm,
+        qty: item.qty,
+        unit: item.unit,
+        unit_price: item.unit_price,
+        discounts: item.discounts || 0,
+        taxes: item.taxes || 0,
+        total: (item.qty * item.unit_price) - (item.discounts || 0) + (item.taxes || 0)
+    }))
+
+    const { error: itemsError } = await supabase
+        .from('quote_items')
+        .insert(quoteItemsData)
+
+    if (itemsError) {
+        console.error('Quote items error:', itemsError)
+        return { error: 'Erro ao salvar itens do orçamento.' }
+    }
+
+    revalidatePath('/app/quotes')
+    return { success: true, quoteId }
+}

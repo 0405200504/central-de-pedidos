@@ -87,3 +87,42 @@ export async function deleteCompany(companyId: string) {
     revalidatePath('/app', 'layout')
     return { success: true }
 }
+
+export async function updateCompany(companyId: string, formData: FormData) {
+    const supabase = await createClient()
+
+    const {
+        data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+        return { error: 'Usuário não autenticado.' }
+    }
+
+    const name = formData.get('name') as string
+    const legal_name = formData.get('legal_name') as string
+    const cnpj = formData.get('cnpj') as string
+    const email = formData.get('email') as string
+
+    if (!name) {
+        return { error: 'O nome da empresa é obrigatório.' }
+    }
+
+    const { error: updateError } = await supabase
+        .from('companies')
+        .update({
+            name,
+            legal_name,
+            cnpj,
+            email,
+        })
+        .eq('id', companyId)
+
+    if (updateError) {
+        console.error(updateError)
+        return { error: 'Erro ao editar a empresa.' }
+    }
+
+    revalidatePath('/app', 'layout')
+    return { success: true }
+}

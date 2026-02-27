@@ -51,3 +51,34 @@ export async function deleteProductAction(productId: string) {
     revalidatePath('/app/products')
     return { success: true }
 }
+
+export async function updateProductAction(productId: string, formData: FormData) {
+    const supabase = await createClient()
+
+    const name = formData.get('name') as string
+    const sku = formData.get('sku') as string
+    const preco_base = formData.get('preco_base') as string
+    const custo = formData.get('custo') as string
+
+    if (!name) {
+        return { error: 'O nome do produto é obrigatório.' }
+    }
+
+    const { error: updateError } = await supabase
+        .from('products')
+        .update({
+            name,
+            sku: sku || null,
+            preco_base: preco_base ? parseFloat(preco_base) : null,
+            custo: custo ? parseFloat(custo) : null,
+        })
+        .eq('id', productId)
+
+    if (updateError) {
+        console.error(updateError)
+        return { error: 'Erro ao editar o produto.' }
+    }
+
+    revalidatePath('/app/products')
+    return { success: true }
+}

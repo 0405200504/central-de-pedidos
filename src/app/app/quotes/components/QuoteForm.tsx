@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Plus, Trash2 } from 'lucide-react'
-import { createQuoteAction } from '../../actions'
+import { createQuoteAction } from '../actions'
 import { toast } from 'sonner'
 import {
     Card,
@@ -31,23 +31,24 @@ type Item = {
     taxes: number
 }
 
-export function QuoteForm({ clients, products }: { clients: any[], products: any[] }) {
+export function QuoteForm({ clients, products, initialQuote }: { clients: any[], products: any[], initialQuote?: any }) {
     const router = useRouter()
     const { activeCompany } = useAppContext()
     const [loading, setLoading] = useState(false)
+    const isEditing = !!initialQuote
 
-    const [clientId, setClientId] = useState('')
-    const [items, setItems] = useState<Item[]>([])
-    const [discountTotal, setDiscountTotal] = useState(0)
-    const [taxTotal, setTaxTotal] = useState(0)
-    const [shippingTotal, setShippingTotal] = useState(0)
-    const [paymentTerms, setPaymentTerms] = useState('')
-    const [deliveryTime, setDeliveryTime] = useState('')
-    const [freightType, setFreightType] = useState('CIF')
-    const [carrier, setCarrier] = useState('')
-    const [notesCommercial, setNotesCommercial] = useState('')
-    const [notesFiscal, setNotesFiscal] = useState('')
-    const [validUntil, setValidUntil] = useState('')
+    const [clientId, setClientId] = useState(initialQuote?.client_id || '')
+    const [items, setItems] = useState<Item[]>(initialQuote?.quote_items || [])
+    const [discountTotal, setDiscountTotal] = useState(initialQuote?.discount_total || 0)
+    const [taxTotal, setTaxTotal] = useState(initialQuote?.tax_total || 0)
+    const [shippingTotal, setShippingTotal] = useState(initialQuote?.shipping_total || 0)
+    const [paymentTerms, setPaymentTerms] = useState(initialQuote?.payment_terms || '')
+    const [deliveryTime, setDeliveryTime] = useState(initialQuote?.delivery_time || '')
+    const [freightType, setFreightType] = useState(initialQuote?.freight_type || 'CIF')
+    const [carrier, setCarrier] = useState(initialQuote?.carrier || '')
+    const [notesCommercial, setNotesCommercial] = useState(initialQuote?.notes_commercial || '')
+    const [notesFiscal, setNotesFiscal] = useState(initialQuote?.notes_fiscal || '')
+    const [validUntil, setValidUntil] = useState(initialQuote?.valid_until || '')
 
     const handleAddItem = () => {
         setItems((prev) => [
@@ -116,30 +117,58 @@ export function QuoteForm({ clients, products }: { clients: any[], products: any
         }
 
         setLoading(true)
-        const result = await createQuoteAction(
-            activeCompany.id,
-            clientId,
-            items,
-            {
-                discount_total: discountTotal,
-                tax_total: taxTotal,
-                shipping_total: shippingTotal,
-                payment_terms: paymentTerms,
-                delivery_time: deliveryTime,
-                freight_type: freightType,
-                carrier: carrier,
-                notes_commercial: notesCommercial,
-                notes_fiscal: notesFiscal,
-                valid_until: validUntil || null,
-                status: 'draft'
-            }
-        )
+
+        let result;
+
+        if (isEditing) {
+            // we need to dynamically import update action here or use it if imported
+            const { updateQuoteAction } = await import('../actions')
+            result = await updateQuoteAction(
+                initialQuote.id,
+                activeCompany.id,
+                clientId,
+                items,
+                {
+                    discount_total: discountTotal,
+                    tax_total: taxTotal,
+                    shipping_total: shippingTotal,
+                    payment_terms: paymentTerms,
+                    delivery_time: deliveryTime,
+                    freight_type: freightType,
+                    carrier: carrier,
+                    notes_commercial: notesCommercial,
+                    notes_fiscal: notesFiscal,
+                    valid_until: validUntil || null,
+                    status: initialQuote.status // keep existing
+                }
+            )
+        } else {
+            result = await createQuoteAction(
+                activeCompany.id,
+                clientId,
+                items,
+                {
+                    discount_total: discountTotal,
+                    tax_total: taxTotal,
+                    shipping_total: shippingTotal,
+                    payment_terms: paymentTerms,
+                    delivery_time: deliveryTime,
+                    freight_type: freightType,
+                    carrier: carrier,
+                    notes_commercial: notesCommercial,
+                    notes_fiscal: notesFiscal,
+                    valid_until: validUntil || null,
+                    status: 'draft'
+                }
+            )
+        }
+
         setLoading(false)
 
         if (result.error) {
             toast.error(result.error)
         } else {
-            toast.success('Orçamento criado com sucesso!')
+            toast.success(isEditing ? 'Orçamento atualizado!' : 'Orçamento criado com sucesso!')
             router.push('/app/quotes')
             router.refresh()
         }

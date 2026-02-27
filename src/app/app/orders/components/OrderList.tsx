@@ -17,6 +17,7 @@ import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { DeleteOrderButton } from './DeleteOrderButton'
 
 export function OrderList({ initialOrders }: { initialOrders: any[] }) {
     const { activeCompany } = useAppContext()
@@ -110,12 +111,13 @@ export function OrderList({ initialOrders }: { initialOrders: any[] }) {
                                             {order.status}
                                         </Badge>
                                     </TableCell>
-                                    <TableCell className="text-right">
+                                    <TableCell className="text-right flex items-center justify-end gap-2">
                                         <Link href={`/app/orders/${order.id}/edit`}>
                                             <Button variant="ghost" size="icon">
                                                 <Edit className="h-4 w-4" />
                                             </Button>
                                         </Link>
+                                        <DeleteOrderButton orderId={order.id} orderNumber={order.number ? `#${order.number}` : order.name || 'Desconhecido'} />
                                     </TableCell>
                                 </TableRow>
                             ))

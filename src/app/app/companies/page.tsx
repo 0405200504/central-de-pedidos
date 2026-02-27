@@ -63,7 +63,8 @@ export default async function CompaniesPage() {
                                             ? format(new Date(company.created_at), 'dd/MM/yyyy', { locale: ptBR })
                                             : '-'}
                                     </TableCell>
-                                    <TableCell className="text-right">
+                                    <TableCell className="text-right flex items-center justify-end gap-2">
+                                        <CompanyDialog company={company} />
                                         <DeleteCompanyButton companyId={company.id} companyName={company.name} />
                                     </TableCell>
                                 </TableRow>

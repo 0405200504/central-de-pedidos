@@ -13,11 +13,13 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Search, FileText, Download } from 'lucide-react'
+import { Search, FileText, Download, Edit } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { generateQuotePdfAction } from '../actions'
 import { toast } from 'sonner'
+import { QuoteStatusSelect } from './QuoteStatusSelect'
+import { DeleteQuoteButton } from './DeleteQuoteButton'
 
 export function QuoteList({ initialQuotes }: { initialQuotes: any[] }) {
     const { activeCompany } = useAppContext()
@@ -118,11 +120,9 @@ export function QuoteList({ initialQuotes }: { initialQuotes: any[] }) {
                                             : '-'}
                                     </TableCell>
                                     <TableCell>
-                                        <Badge className={`${getStatusColor(quote.status)}`}>
-                                            {quote.status}
-                                        </Badge>
+                                        <QuoteStatusSelect quoteId={quote.id} currentStatus={quote.status} />
                                     </TableCell>
-                                    <TableCell className="text-right space-x-2 flex justify-end">
+                                    <TableCell className="text-right flex items-center justify-end gap-2">
                                         {quote.pdf_url ? (
                                             <a href={quote.pdf_url} target="_blank" rel="noopener noreferrer">
                                                 <Button variant="outline" size="sm">
@@ -140,6 +140,10 @@ export function QuoteList({ initialQuotes }: { initialQuotes: any[] }) {
                                                 {loadingPdf === quote.id ? 'Gerando...' : 'Gerar PDF'}
                                             </Button>
                                         )}
+                                        <Button variant="outline" size="icon" onClick={() => window.location.href = `/app/quotes/${quote.id}/edit`}>
+                                            <Edit className="h-4 w-4" />
+                                        </Button>
+                                        <DeleteQuoteButton quoteId={quote.id} quoteNumber={quote.number} />
                                     </TableCell>
                                 </TableRow>
                             ))

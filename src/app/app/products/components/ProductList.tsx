@@ -14,6 +14,9 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Search } from 'lucide-react'
 
+import { ProductDialog } from './ProductDialog'
+import { DeleteProductButton } from './DeleteProductButton'
+
 export function ProductList({ initialProducts }: { initialProducts: any[] }) {
     const { activeCompany } = useAppContext()
     const [searchTerm, setSearchTerm] = useState('')
@@ -64,6 +67,7 @@ export function ProductList({ initialProducts }: { initialProducts: any[] }) {
                             <TableHead>Preço (R$)</TableHead>
                             <TableHead>NCM</TableHead>
                             <TableHead>Status</TableHead>
+                            <TableHead className="text-right">Ações</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -88,6 +92,10 @@ export function ProductList({ initialProducts }: { initialProducts: any[] }) {
                                         <Badge variant={product.status === 'ativo' ? 'default' : 'secondary'}>
                                             {product.status}
                                         </Badge>
+                                    </TableCell>
+                                    <TableCell className="text-right flex items-center justify-end gap-2">
+                                        <ProductDialog product={product} />
+                                        <DeleteProductButton productId={product.id} productName={product.name} />
                                     </TableCell>
                                 </TableRow>
                             ))
